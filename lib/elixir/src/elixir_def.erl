@@ -159,7 +159,7 @@ translate_definition(Kind, Line, Name, Args, Guards, Body, E) when is_integer(Li
   Body == nil andalso check_args_for_bodyless_clause(Line, EArgs, E),
 
   S = elixir_env:env_to_scope(E),
-  {Unpacked, Defaults} = elixir_def_defaults:unpack(Kind, Name, EArgs, S),
+  {Unpacked, Defaults} = elixir_def_defaults:unpack(Kind, Name, EArgs, Line, S),
   {Clauses, Super} = translate_clause(Body, Line, Kind, Unpacked, EGuards, EBody, S),
 
   Function = {function, Line, Name, Arity, Clauses},

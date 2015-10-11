@@ -1,6 +1,6 @@
 % Handle default clauses for function definitions.
 -module(elixir_def_defaults).
--export([expand/2, unpack/4]).
+-export([expand/2, unpack/5]).
 -include("elixir.hrl").
 
 expand(Args, E) ->
@@ -14,22 +14,20 @@ expand(Args, E) ->
       elixir_exp:expand(Left, Acc)
   end, E, Args).
 
-unpack(Kind, Name, Args, S) ->
-  unpack_each(Kind, Name, Args, [], [], S).
+unpack(Kind, Name, Args, Line, S) ->
+  unpack_each(Kind, Name, Args, Line, [], [], S).
 
 %% Helpers
 
 %% Unpack default from given args.
 %% Returns the given arguments without their default
 %% clauses and a list of clauses for the default calls.
-unpack_each(Kind, Name, [{'\\\\', DefMeta, [Expr, _]}|T] = List, Acc, Clauses, S) ->
+unpack_each(Kind, Name, [{'\\\\', _DefMeta, [Expr, _]}|T] = List, Line, Acc, Clauses, S) ->
   Base = wrap_kind(Kind, build_match(Acc, [])),
   {Args, Invoke} = extract_defaults(List, length(Base), [], []),
 
   {DefArgs, SA}  = elixir_clauses:match(fun elixir_translator:translate_args/2, Base ++ Args, S),
   {DefInvoke, _} = elixir_translator:translate_args(Base ++ Invoke, SA),
-
-  Line = ?line(DefMeta),
 
   Call = {call, Line,
     {atom, Line, name_for_kind(Kind, Name)},
@@ -37,12 +35,12 @@ unpack_each(Kind, Name, [{'\\\\', DefMeta, [Expr, _]}|T] = List, Acc, Clauses, S
   },
 
   Clause = {clause, Line, DefArgs, [], [Call]},
-  unpack_each(Kind, Name, T, [Expr|Acc], [Clause|Clauses], S);
+  unpack_each(Kind, Name, T, Line, [Expr|Acc], [Clause|Clauses], S);
 
-unpack_each(Kind, Name, [H|T], Acc, Clauses, S) ->
-  unpack_each(Kind, Name, T, [H|Acc], Clauses, S);
+unpack_each(Kind, Name, [H|T], Line, Acc, Clauses, S) ->
+  unpack_each(Kind, Name, T, Line, [H|Acc], Clauses, S);
 
-unpack_each(_Kind, _Name, [], Acc, Clauses, _S) ->
+unpack_each(_Kind, _Name, [], _Line, Acc, Clauses, _S) ->
   {lists:reverse(Acc), lists:reverse(Clauses)}.
 
 % Extract default values from args following the current default clause.
